@@ -1,69 +1,81 @@
 import json
-import urllib.request
-from pprint import pprint
+import os
 
-def request(action, **params):
-    return {'action': action, 'params': params, 'version': 6}
-
-def invoke(action, **params):
-    requestJson = json.dumps(request(action, **params)).encode('utf-8')
-    response = json.load(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8765', requestJson)))
-    if len(response) != 2:
-        raise Exception('response has an unexpected number of fields')
-    if 'error' not in response:
-        raise Exception('response is missing required error field')
-    if 'result' not in response:
-        raise Exception('response is missing required result field')
-    if response['error'] is not None:
-        raise Exception(response['error'])
-    return response['result']
-
-decknames = invoke('deckNames')
-deck_plegsystem = []
-for deckname in decknames:
-    if "plegsysteme" in deckname and "::" in deckname:
-        deck_plegsystem.append(deckname.split('::')[1])
-        
-
-data = {}
-for deckname in deck_plegsystem:
-    if deckname not in data:
-        data[deckname] = {}
-    cards = invoke('findCards', query=f'deck:plegsysteme::{deckname}')
-    cards = invoke("cardsInfo", cards=cards)
-    for card in cards:
-        front = card["fields"]["Front"]["value"]
-        if "objectBox-string" in front:
-            front = front.split('objectBox-string">')[1]
-            front = front.split('</span></span></span></span>')[0]
-            if "<br>" in front:
-                front = front.split('<br>')[0]
-        if "<br>" in front:
-            front = front.split('<br>')[0]
-        if "[sound:ank" in front:
-            front = front.split("[sound:ank")[0]
-        back = card["fields"]["Back"]["value"]
-        if "objectBox-string" in back:
-            back = back.split('objectBox-string">')[1]
-            back = back.split('</span></span></span></span>')[0]
-        if "<br>" in back:
-            back = back.split("<br>")[0]
-        if "[sound:ank" in back:
-            back = back.split("[sound:ank")[0]
-        
-        try:
-            int(front)
-            if "-" in back and back not in ["jean-francois", "jean-louis", "t-shirt", "new-york", "talkie-walkie"]:
-                back = back.split('-')[0]
-            data[deckname][front] = back
-        except Exception:
-            pass
-
-
-pprint(data)
-
-
-import json
-with open("data.json", "w") as f:
-    json.dump(data, f, indent=4, ensure_ascii=False)
+with open("data.json", "r") as f:
+    plegsystem = json.load(f)
     
+CATEGORIES = ["personnage", "animaux", "plantes", "métiers", "science", "lieux", "verbe", "adjectifs", "autres"]
+
+def manage_menu_range(sub_pleg):
+    os.system("clear")
+    print(f"CHOIX A RANGE".center(40, "-"))
+    ranges = list(map(int, list(sub_pleg.keys())))
+    ranges.sort()
+    print(f"\n       START RANGE {ranges[0]} - END RANGE {ranges[-1]}")
+    choice = input("            > ")
+    choice = choice.split('-')
+    if len(choice) == 3:
+        range_inf, range_sup, format = choice[0], choice[1], choice[2]
+    else:
+        print("You must enter a valid range. format: RANGE_INF-RANGE_SUP")
+        return
+    try:
+        range_inf = int(range_inf)
+        range_sup = int(range_sup)
+    except Exception:
+        print("You must enter a valid range. format:RANGE_INF-RANGE_SUP")
+    return choice
+    
+
+def show_not_randomly_game(sub_pleg, inf, sup):
+    L = len(list(sub_pleg.keys()))
+    print("")
+
+def manage_menu():
+    os.system("clear")
+    print(f"CHOIX CATEGORIE".center(40, "-"))
+    print()
+    print("            1 - personnages")
+    print("            2 - animaux")
+    print("            3 - plantes")
+    print("            4 - métiers")
+    print("            5 - science")
+    print("            6 - lieux")
+    print("            7 - verbe")
+    print("            8 - adjectifs")
+    print("            9 - autres\n")
+    print("-"*40)
+    choice = input("            > ")
+    try:
+        choice = int(choice)
+    except Exception:
+        print(f"You must enter a valid number between [1, 9]")
+        return
+    if choice > 9 or choice < 1:
+        print("Enter number between [1, 9]")
+    return choice
+   
+   
+while True: 
+    
+    user_choice = manage_menu()
+    if user_choice is not None:
+        sub_pleg = plegsystem[CATEGORIES[user_choice-1]]
+        user_choice = manage_menu_range(sub_pleg)
+        if user_choice is not None:
+            inf, sup, format = user_choice[0], user_choice[1], user_choice[2]
+            if format == "s": #show
+                show_not_randomly_game(sub_pleg=sub_pleg, inf, sup)
+            if format == "r": #random
+                pass
+            if format == "rs" or format == "sr": #show and random
+                pass
+            if format == "nr" or format == "rn": # not show and now random
+                pass
+            
+            
+            
+        
+            
+            
+
